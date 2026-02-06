@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="header">
+        <h1>Aman Kumar</h1>
+        <p>Full Stack Developer | Freelancer | AI Engineer | DevOps Engineer</p>
+        <img src="PHOTO2.jpeg" alt="My Image" height="200px" width="200px">
+    </header>
+
+    <hr>
+    <nav class="navbar">
+        <a href="https://github.com/amankr15062005">GitHub</a>
+        <a href="https://leetcode.com/u/amankr15062005/">Leetcode</a>
+        <a href="https://www.linkedin.com/in/aman-kumar-254547277/">LinkedIn</a>
+    </nav>
+    <hr>
+
+    <section class="section">
+        <h2>Projects</h2>
+
+        <article class="card">
+            <h3>Library Management System | <a href="https://github.com/amankr15062005">GitHub</a></h3>
+            <p> In this System Admin Can Add Books,Delete or Update</p>
+        </article>
+
+        <article class="card">
+            <h3>Hospital Management System | <a href="https://github.com/amankr15062005">GitHub</a></h3>
+            <p> A Hospital Management System (HMS) is software that manages hospital operations like patient records,
+                appointments, billing, and staff details</p>
+        </article>
+    </section>
+    <hr>
+    <section class="section">
+        <h2>Skills</h2>
+        <ul>
+            <li>Java</li>
+            <li>HTML</li>
+            <li>CSS</li>
+            <li>System Design</li>
+        </ul>
+    </section>
+    <hr>
+
+    <section class="section">
+        <h2>Education</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Specialization</th>
+                    <th>Institute</th>
+                    <th>Grade</th>
+                    <th>Year</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>MCA</td>
+                    <td>General</td>
+                    <td>CU</td>
+                    <td>9</td>
+                    <td>2027</td>
+                </tr>
+
+                <tr>
+                    <td>BCA</td>
+                    <td>Cumputer Application</td>
+                    <td>L.N Mishra College Of Business Managem</td>
+                    <td>72.2%</td>
+                    <td>2025</td>
+                </tr>
+
+                <tr>
+                    <td>Intermediate</td>
+                    <td>PCM</td>
+                    <td>Balihari High School</td>
+                    <td>82%</td>
+                    <td>2022</td>
+                </tr>
+
+                <tr>
+                    <td>Matriculation</td>
+                    <td>Non-Medical</td>
+                    <td>Oxford Public School</td>
+                    <td>67%</td>
+                    <td>2020</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+     <hr>
+      
+        <section class="section">
+            <h2>Contact Us</h3>
+        <form action=""> 
+            <label for="name">Enter Name</label>
+            <input type="text" id="name" name="UserName" required><br>
+
+            <label for="email">Enter Email</label>
+             <input type="text" id="email" name="UserEmail" required><br>
+ 
+            <label for="msg">Enter Message</label>
+             <textarea name="UserMsg" id="msg"></textarea><br>
+
+            <label for="reason">Reason</label>
+            <select name="" id="reason">
+                <option value="">--Select--</option>
+                <option value="job">Job Oppertunity</option>
+                <option value="freelance">Freelancer</option>
+                <option value="training">Training</option>
+            </select><br>
+
+            <input type="submit"  value="Submit">
+            <input type="reset" value="Reset">
+ 
+        </form>
+     </section>
+</body>
+
+</html>
+
+
+
