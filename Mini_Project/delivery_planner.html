@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Delivery Route Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060810;
+  --bg2: #0c0f1a;
+  --bg3: #111520;
+  --bg4: #161b28;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.11);
+  --text: #dde1ee;
+  --muted: #5a6070;
+  --muted2: #3a3f52;
+  --green: #34d399;
+  --blue: #60a5fa;
+  --amber: #fbbf24;
+  --pink: #f472b6;
+  --purple: #a78bfa;
+  --red: #f87171;
+  --teal: #2dd4bf;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui: 'Outfit', sans-serif;
+  --r: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden}
+
+
+.shell { display:grid; grid-template-rows:48px 1fr; height:100vh; }
+header {
+  display:flex; align-items:center; gap:16px; padding:0 20px;
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  position:relative; z-index:10;
+}
+.wordmark { font-family:var(--font-mono); font-size:13px; font-weight:700; letter-spacing:.06em; color:var(--green); }
+.wordmark em { color:var(--muted); font-style:normal; }
+.hpipe { width:1px; height:20px; background:var(--border2); }
+.htag { font-family:var(--font-mono); font-size:10px; color:var(--muted); }
+.hright { margin-left:auto; display:flex; gap:6px; align-items:center; }
+.pill {
+  font-family:var(--font-mono); font-size:9px; padding:3px 8px;
+  border-radius:3px; border:1px solid; letter-spacing:.04em;
+}
+.pill.g { color:var(--green); border-color:rgba(52,211,153,.25); background:rgba(52,211,153,.07); }
+.pill.b { color:var(--blue); border-color:rgba(96,165,250,.25); background:rgba(96,165,250,.07); }
+.pill.a { color:var(--amber); border-color:rgba(251,191,36,.25); background:rgba(251,191,36,.07); }
+.pill.p { color:var(--purple); border-color:rgba(167,139,250,.25); background:rgba(167,139,250,.07); }
+
+.main { display:grid; grid-template-columns:1fr 360px; overflow:hidden; }
+
+.map-area {
+  position:relative; display:flex; flex-direction:column;
+  background:var(--bg);
+}
+.map-toolbar {
+  padding:10px 16px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  border-bottom:1px solid var(--border); background:var(--bg2); flex-shrink:0;
+}
+.tgrp { display:flex; gap:2px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:2px; }
+.tbtn {
+  font-family:var(--font-mono); font-size:10px; padding:5px 11px;
+  border-radius:4px; border:none; background:transparent; color:var(--muted);
+  cursor:pointer; transition:all .13s; letter-spacing:.03em; white-space:nowrap;
+}
+.tbtn:hover { color:var(--text); background:rgba(255,255,255,.05); }
+.tbtn.on { color:var(--green); background:rgba(52,211,153,.12); }
+.tbtn.on.b { color:var(--blue); background:rgba(96,165,250,.12); }
+.tbtn.on.a { color:var(--amber); background:rgba(251,191,36,.12); }
+.tbtn.go {
+  color:var(--green); border:1px solid rgba(52,211,153,.3);
+  background:rgba(52,211,153,.1); padding:5px 18px;
+}
+.tbtn.go:hover { background:rgba(52,211,153,.18); }
+.tbtn.go:disabled { opacity:.35; cursor:not-allowed; }
+.tbtn.clr { color:var(--red); }
+.tbtn.clr:hover { background:rgba(248,113,113,.08); }
+.speed-row { display:flex; align-items:center; gap:7px; margin-left:auto; }
+.speed-row label { font-family:var(--font-mono); font-size:9px; color:var(--muted); }
+input[type=range] { width:72px; accent-color:var(--green); cursor:pointer; }
+
+#mapCanvas { display:block; flex:1; cursor:crosshair; }
+
+
+.mode-badge {
+  position:absolute; bottom:14px; left:16px;
+  font-family:var(--font-mono); font-size:10px; color:var(--muted);
+  background:var(--bg2); border:1px solid var(--border);
+  padding:4px 10px; border-radius:4px;
+  pointer-events:none;
+}
+
+
+.panel {
+  background:var(--bg2); border-left:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.psec { padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.psec-title {
+  font-family:var(--font-mono); font-size:9px; letter-spacing:.1em;
+  color:var(--muted); text-transform:uppercase; margin-bottom:10px;
+}
+
+
+.srow { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.scard {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--r); padding:9px 11px;
+}
+.slabel { font-family:var(--font-mono); font-size:9px; color:var(--muted); letter-spacing:.07em; margin-bottom:3px; }
+.sval { font-family:var(--font-mono); font-size:20px; font-weight:700; line-height:1; }
+.sval.g { color:var(--green); } .sval.b { color:var(--blue); }
+.sval.a { color:var(--amber); } .sval.p { color:var(--purple); }
+.sval small { font-size:10px; font-weight:400; color:var(--muted); }
+
+
+.algo-card {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--r); padding:10px 12px; margin-bottom:7px;
+  transition:border-color .2s;
+}
+.algo-card.best { border-color:rgba(52,211,153,.35); }
+.algo-top { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.algo-name { font-family:var(--font-mono); font-size:11px; flex:1; }
+.algo-dist { font-family:var(--font-mono); font-size:13px; font-weight:700; }
+.best-tag {
+  font-family:var(--font-mono); font-size:9px; padding:2px 6px;
+  border-radius:2px; background:rgba(52,211,153,.15); color:var(--green);
+}
+.savings-tag {
+  font-family:var(--font-mono); font-size:9px; padding:2px 6px;
+  border-radius:2px; background:rgba(251,191,36,.1); color:var(--amber);
+}
+.barwrap { height:3px; background:rgba(255,255,255,.04); border-radius:2px; overflow:hidden; margin-bottom:5px; }
+.barfill { height:100%; border-radius:2px; transition:width .7s cubic-bezier(.4,0,.2,1); }
+.algo-meta { font-size:10px; color:var(--muted); display:flex; gap:10px; font-family:var(--font-mono); }
+
+
+.route-log { flex:1; overflow-y:auto; padding:10px 14px; }
+.rline { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.rline:last-child { border-bottom:none; }
+.rnum { font-family:var(--font-mono); font-size:10px; color:var(--muted); min-width:18px; }
+.ricon { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; font-weight:700; font-family:var(--font-mono); }
+.rdesc { flex:1; }
+.rdist { font-family:var(--font-mono); font-size:10px; color:var(--muted); }
+
+
+.chart-wrap { height:120px; padding:4px 2px; overflow-y: auto; }
+canvas#compChart { width:100% !important; height:120px !important; }
+
+
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+
+.statusbar {
+  grid-column:1/-1; display:none;
+  padding:5px 20px; background:rgba(52,211,153,.05);
+  border-top:1px solid rgba(52,211,153,.12);
+  font-family:var(--font-mono); font-size:10px; color:var(--green);
+  align-items:center; gap:8px;
+}
+.statusbar.show { display:flex; }
+.sdot { width:5px; height:5px; border-radius:50%; background:var(--green); animation:blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+
+.nodeinfo {
+  position:absolute; top:10px; right:10px;
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:var(--r); padding:8px 12px;
+  font-family:var(--font-mono); font-size:10px; color:var(--muted);
+  pointer-events:none; display:none;
+}
+.nodeinfo.show { display:block; }
+
+
+.atoggle-row { display:flex; gap:5px; margin-bottom:8px; }
+.atbtn {
+  font-family:var(--font-mono); font-size:9px; padding:3px 9px;
+  border-radius:3px; border:1px solid; cursor:pointer;
+  background:transparent; transition:all .13s;
+}
+.atbtn[data-a="greedy"]    { color:var(--green);  border-color:rgba(52,211,153,.25); }
+.atbtn[data-a="greedy"].on { background:rgba(52,211,153,.12); }
+.atbtn[data-a="dp"]        { color:var(--blue);   border-color:rgba(96,165,250,.25); }
+.atbtn[data-a="dp"].on     { background:rgba(96,165,250,.12); }
+.atbtn[data-a="bf"]        { color:var(--purple); border-color:rgba(167,139,250,.25); }
+.atbtn[data-a="bf"].on     { background:rgba(167,139,250,.12); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="wordmark">ROUTE<em>_</em>AI</div>
+  <div class="hpipe"></div>
+  <div class="htag">// Smart Delivery Route Planner — DAA Project</div>
+  <div class="hright">
+    <span class="pill g">Dijkstra</span>
+    <span class="pill b">Greedy TSP</span>
+    <span class="pill a">DP-TSP</span>
+    <span class="pill p">Branch &amp; Bound</span>
+  </div>
+</header>
+
+<div class="main">
+
+
+  <div class="map-area">
+    <div class="map-toolbar">
+      <div class="tgrp">
+        <button class="tbtn on" id="btn-depot"  onclick="setMode('depot')">⬟ Depot</button>
+        <button class="tbtn"    id="btn-stop"   onclick="setMode('stop')">★ Stop</button>
+        <button class="tbtn"    id="btn-road"   onclick="setMode('road')">╌ Road</button>
+        <button class="tbtn"    id="btn-del"    onclick="setMode('del')">✕ Delete</button>
+      </div>
+      <div class="tgrp">
+        <button class="tbtn" onclick="loadPreset('city')">City grid</button>
+        <button class="tbtn" onclick="loadPreset('suburb')">Suburbs</button>
+        <button class="tbtn" onclick="loadPreset('random')">Random</button>
+      </div>
+      <button class="tbtn go" id="run-btn" onclick="runAll()">▶ Plan Route</button>
+      <button class="tbtn clr" onclick="clearAll()">↺ Clear</button>
+      <div class="speed-row">
+        <label>SPEED</label>
+        <input type="range" id="spd" min="1" max="6" value="3">
+      </div>
+    </div>
+    <canvas id="mapCanvas"></canvas>
+    <div class="mode-badge" id="mode-badge">MODE: DEPOT</div>
+    <div class="nodeinfo" id="nodeinfo"></div>
+  </div>
+
+ 
+  <div class="panel">
+
+    <div class="psec">
+      <div class="psec-title">Live Statistics</div>
+      <div class="srow">
+        <div class="scard"><div class="slabel">NODES</div><div class="sval g" id="sv-nodes">0</div></div>
+        <div class="scard"><div class="slabel">ROADS</div><div class="sval b" id="sv-edges">0</div></div>
+        <div class="scard"><div class="slabel">STOPS</div><div class="sval a" id="sv-stops">0</div></div>
+        <div class="scard"><div class="slabel">BEST DIST</div><div class="sval p" id="sv-best">—<small> km</small></div></div>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="psec-title">Algorithm Comparison</div>
+      <div class="atoggle-row">
+        <button class="atbtn on" data-a="greedy" onclick="toggleRoute(this)">Greedy</button>
+        <button class="atbtn on" data-a="dp"     onclick="toggleRoute(this)">DP-TSP</button>
+        <button class="atbtn on" data-a="bf"     onclick="toggleRoute(this)">Brute Force</button>
+      </div>
+
+      <div class="algo-card" id="card-greedy">
+        <div class="algo-top">
+          <span class="algo-name" style="color:var(--green)">Greedy Nearest-Neighbor</span>
+          <span class="algo-dist" style="color:var(--green)" id="ad-greedy">—</span>
+        </div>
+        <div class="barwrap"><div class="barfill" id="ab-greedy" style="width:0;background:var(--green)"></div></div>
+        <div class="algo-meta"><span id="at-greedy">—ms</span><span>O(n²)</span><span>Approx.</span></div>
+      </div>
+
+      <div class="algo-card" id="card-dp">
+        <div class="algo-top">
+          <span class="algo-name" style="color:var(--blue)">DP-TSP (Held-Karp)</span>
+          <span class="algo-dist" style="color:var(--blue)" id="ad-dp">—</span>
+        </div>
+        <div class="barwrap"><div class="barfill" id="ab-dp" style="width:0;background:var(--blue)"></div></div>
+        <div class="algo-meta"><span id="at-dp">—ms</span><span>O(n²·2ⁿ)</span><span>Exact (n≤15)</span></div>
+      </div>
+
+      <div class="algo-card" id="card-bf">
+        <div class="algo-top">
+          <span class="algo-name" style="color:var(--purple)">Brute Force</span>
+          <span class="algo-dist" style="color:var(--purple)" id="ad-bf">—</span>
+        </div>
+        <div class="barwrap"><div class="barfill" id="ab-bf" style="width:0;background:var(--purple)"></div></div>
+        <div class="algo-meta"><span id="at-bf">—ms</span><span>O(n!)</span><span id="bf-note">Exact (n≤8)</span></div>
+      </div>
+    </div>
+
+    <div class="psec" style="padding-bottom:10px">
+      <div class="psec-title">Nodes Visited · Path Cost</div>
+      <div class="chart-wrap"><canvas id="compChart"></canvas></div>
+    </div>
+
+    <div class="psec-title" style="padding:10px 16px 4px">Delivery Route Log</div>
+    <div class="route-log" id="route-log">
+      <div class="rline"><span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Add nodes, draw roads, then plan route.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="statusbar" id="statusbar">
+  <div class="sdot"></div>
+  <span id="status-msg">Computing...</span>
+</div>
+
+</div><!-- shell -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── STATE ──────────────────────────────────────────────────
+const cvs = document.getElementById('mapCanvas');
+const ctx = cvs.getContext('2d');
+let W, H;
+
+const NODE_R = 18;
+const DEPOT_CLR = '#fbbf24', STOP_CLR = '#34d399', ROAD_CLR = 'rgba(255,255,255,0.18)';
+const ROUTE_COLORS = { greedy:'#34d399', dp:'#60a5fa', bf:'#a78bfa' };
+
+let nodes = [], edges = [], mode = 'depot';
+let dragging = null, dragOff = {x:0,y:0};
+let roadStart = null;
+let animRunning = false;
+let results = { greedy:null, dp:null, bf:null };
+let routeViz = { greedy:true, dp:true, bf:true };
+let animPaths = { greedy:[], dp:[], bf:[] };
+let chartInst = null;
+
+function resize(){
+  const rect = cvs.parentElement.getBoundingClientRect();
+  W = cvs.width  = rect.width;
+  H = cvs.height = rect.height - 44;
+  draw();
+}
+window.addEventListener('resize', resize);
+
+// ── GRAPH HELPERS ──────────────────────────────────────────
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function edgeDist(e){ return Math.round(dist(nodes[e.a],nodes[e.b])*0.05+1)/10; }
+
+function getNodeAt(x,y){
+  for(let i=nodes.length-1;i>=0;i--)
+    if(dist({x,y},nodes[i])<NODE_R+4) return i;
+  return -1;
+}
+
+function getEdgeBetween(a,b){
+  return edges.findIndex(e=>(e.a===a&&e.b===b)||(e.a===b&&e.b===a));
+}
+
+// Build adjacency list for Dijkstra
+function buildAdj(){
+  const adj = nodes.map(()=>[]);
+  edges.forEach(e=>{
+    const w = edgeDist(e);
+    adj[e.a].push({to:e.b,w});
+    adj[e.b].push({to:e.a,w});
+  });
+  return adj;
+}
+
+// ── DIJKSTRA ──────────────────────────────────────────────
+function dijkstra(src){
+  const n = nodes.length;
+  const d = Array(n).fill(Infinity);
+  const prev = Array(n).fill(-1);
+  const vis = Array(n).fill(false);
+  const adj = buildAdj();
+  d[src] = 0;
+  const pq = [[0,src]];
+  let visited = 0;
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [dd,u] = pq.shift();
+    if(vis[u]) continue;
+    vis[u]=true; visited++;
+    for(const {to,w} of adj[u]){
+      if(d[u]+w < d[to]){ d[to]=d[u]+w; prev[to]=u; pq.push([d[to],to]); }
+    }
+  }
+  return {d, prev, visited};
+}
+
+function getPath(prev,src,dst){
+  if(prev[dst]===-1 && dst!==src) return null;
+  const p=[];let c=dst;
+  while(c!==-1){p.push(c);c=prev[c];}
+  return p.reverse();
+}
+
+// Pairwise shortest distances between all delivery nodes
+function pairwiseDist(nodeIds){
+  const m = nodeIds.length;
+  const mat = Array.from({length:m},()=>Array(m).fill(Infinity));
+  const pathMat = Array.from({length:m},()=>Array(m).fill(null));
+  for(let i=0;i<m;i++){
+    const {d,prev} = dijkstra(nodeIds[i]);
+    for(let j=0;j<m;j++){
+      mat[i][j] = d[nodeIds[j]];
+      pathMat[i][j] = getPath(prev,nodeIds[i],nodeIds[j]);
+    }
+  }
+  return {mat,pathMat};
+}
+
+// ── GREEDY NEAREST-NEIGHBOR TSP ───────────────────────────
+function greedyTSP(mat, n){
+  const t0=performance.now();
+  const visited=Array(n).fill(false);
+  const order=[0]; visited[0]=true;
+  let totalDist=0;
+  while(order.length<n){
+    const cur=order[order.length-1];
+    let best=-1, bestD=Infinity;
+    for(let j=0;j<n;j++){
+      if(!visited[j] && mat[cur][j]<bestD){ bestD=mat[cur][j]; best=j; }
+    }
+    if(best===-1) break;
+    order.push(best); visited[best]=true; totalDist+=bestD;
+  }
+  totalDist+=mat[order[order.length-1]][0];
+  order.push(0);
+  return {order, dist:totalDist, time:performance.now()-t0};
+}
+
+// ── DP-TSP (Held-Karp) ────────────────────────────────────
+function dpTSP(mat, n){
+  if(n>15) return null;
+  const t0=performance.now();
+  const full=(1<<n)-1;
+  const dp=Array.from({length:1<<n},()=>Array(n).fill(Infinity));
+  const par=Array.from({length:1<<n},()=>Array(n).fill(-1));
+  dp[1][0]=0;
+  for(let mask=1;mask<=full;mask++){
+    for(let u=0;u<n;u++){
+      if(!(mask&(1<<u))||dp[mask][u]===Infinity) continue;
+      for(let v=0;v<n;v++){
+        if(mask&(1<<v)) continue;
+        const nm=mask|(1<<v);
+        const nd=dp[mask][u]+mat[u][v];
+        if(nd<dp[nm][v]){ dp[nm][v]=nd; par[nm][v]=u; }
+      }
+    }
+  }
+  let best=Infinity, last=-1;
+  for(let u=1;u<n;u++){
+    const d=dp[full][u]+mat[u][0];
+    if(d<best){ best=d; last=u; }
+  }
+  // Reconstruct
+  const order=[]; let mask=full, cur=last;
+  while(cur!==-1){
+    order.push(cur);
+    const p=par[mask][cur];
+    mask^=(1<<cur); cur=p;
+  }
+  order.reverse(); order.push(0);
+  return {order, dist:best, time:performance.now()-t0};
+}
+
+// ── BRUTE FORCE TSP ───────────────────────────────────────
+function bfTSP(mat, n){
+  if(n>8) return {order:null,dist:Infinity,time:0,skipped:true};
+  const t0=performance.now();
+  const perm=[];
+  for(let i=1;i<n;i++) perm.push(i);
+  function permutations(arr){
+    if(arr.length<=1) return [arr];
+    const res=[];
+    for(let i=0;i<arr.length;i++){
+      const rest=[...arr.slice(0,i),...arr.slice(i+1)];
+      for(const p of permutations(rest)) res.push([arr[i],...p]);
+    }
+    return res;
+  }
+  const perms=permutations(perm);
+  let bestD=Infinity, bestOrder=null;
+  for(const p of perms){
+    const full=[0,...p,0];
+    let d=0;
+    for(let i=0;i<full.length-1;i++) d+=mat[full[i]][full[i+1]];
+    if(d<bestD){ bestD=d; bestOrder=full; }
+  }
+  return {order:bestOrder, dist:bestD, time:performance.now()-t0};
+}
+
+// ── DRAW ──────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // Dark map background with subtle grid
+  ctx.fillStyle='#07090f';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.025)';
+  ctx.lineWidth=0.5;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Draw roads
+  edges.forEach(e=>{
+    const a=nodes[e.a], b=nodes[e.b];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=3; ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=5; ctx.stroke();
+    // Distance label
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const d=edgeDist(e).toFixed(1);
+    ctx.fillStyle='rgba(90,96,112,0.9)';
+    ctx.font='9px JetBrains Mono,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(d+'km',mx,my-7);
+  });
+
+  // Draw animated route paths
+  for(const algo of ['bf','dp','greedy']){
+    if(!routeViz[algo] || !animPaths[algo].length) continue;
+    const segs=animPaths[algo];
+    const clr=ROUTE_COLORS[algo];
+    for(let s=0;s<segs.length;s++){
+      const seg=segs[s];
+      for(let i=0;i<seg.length-1;i++){
+        const a=nodes[seg[i]], b=nodes[seg[i+1]];
+        // Offset lines so they don't overlap
+        const off=algo==='greedy'?0:algo==='dp'?5:-5;
+        const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+        const ox=-dy/len*off,oy=dx/len*off;
+        ctx.beginPath();
+        ctx.moveTo(a.x+ox,a.y+oy); ctx.lineTo(b.x+ox,b.y+oy);
+        ctx.strokeStyle=clr+(algo==='greedy'?'ee':'99');
+        ctx.lineWidth=algo==='greedy'?3:2;
+        if(algo!=='greedy'){ctx.setLineDash([6,4]);}
+        ctx.stroke(); ctx.setLineDash([]);
+        // Arrow head
+        const angle=Math.atan2(b.y-a.y,b.x-a.x);
+        const mx=(a.x+b.x)/2+ox, my=(a.y+b.y)/2+oy;
+        ctx.save();
+        ctx.translate(mx,my); ctx.rotate(angle);
+        ctx.beginPath(); ctx.moveTo(-5,-4); ctx.lineTo(0,0); ctx.lineTo(-5,4);
+        ctx.strokeStyle=clr; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // Road-drawing preview
+  if(roadStart!==null && mode==='road'){
+    const a=nodes[roadStart];
+    ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(mousePos.x,mousePos.y);
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Nodes
+  nodes.forEach((n,i)=>{
+    const isDepot=n.type==='depot';
+    const clr=isDepot?DEPOT_CLR:STOP_CLR;
+    const label=isDepot?'D':(i+1).toString();
+
+    // Outer glow
+    const grad=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,NODE_R+8);
+    grad.addColorStop(0, clr+'30'); grad.addColorStop(1,'transparent');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(n.x,n.y,NODE_R+8,0,Math.PI*2); ctx.fill();
+
+    // Node circle
+    ctx.beginPath(); ctx.arc(n.x,n.y,NODE_R,0,Math.PI*2);
+    ctx.fillStyle=isDepot?'rgba(251,191,36,.15)':'rgba(52,211,153,.12)';
+    ctx.fill();
+    ctx.strokeStyle=clr; ctx.lineWidth=isDepot?2.5:1.5; ctx.stroke();
+
+    // Label
+    ctx.fillStyle=clr;
+    ctx.font=`bold ${isDepot?11:10}px JetBrains Mono,monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(label,n.x,n.y);
+
+    // Node name below
+    if(n.name){
+      ctx.fillStyle='rgba(220,225,238,0.7)';
+      ctx.font='10px Outfit,sans-serif';
+      ctx.fillText(n.name,n.x,n.y+NODE_R+10);
+    }
+  });
+
+  // Road-start highlight
+  if(roadStart!==null){
+    const a=nodes[roadStart];
+    ctx.beginPath(); ctx.arc(a.x,a.y,NODE_R+4,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  updateStats();
+}
+
+let mousePos={x:0,y:0};
+
+// ── INTERACTIONS ──────────────────────────────────────────
+cvs.addEventListener('mousemove',e=>{
+  const r=cvs.getBoundingClientRect();
+  mousePos={x:e.clientX-r.left,y:e.clientY-r.top};
+  if(mode==='road' && roadStart!==null) draw();
+  if(dragging!==null){
+    nodes[dragging].x=mousePos.x+dragOff.x;
+    nodes[dragging].y=mousePos.y+dragOff.y;
+    animPaths={greedy:[],dp:[],bf:[]};
+    draw();
+  }
+  // Tooltip
+  const ni=getNodeAt(mousePos.x,mousePos.y);
+  const tip=document.getElementById('nodeinfo');
+  if(ni>=0&&mode!=='road'){
+    const n=nodes[ni];
+    tip.innerHTML=`<b style="color:${n.type==='depot'?DEPOT_CLR:STOP_CLR}">${n.name||'Node '+(ni+1)}</b><br>${n.type==='depot'?'Depot':'Delivery Stop'}<br>${edges.filter(e=>e.a===ni||e.b===ni).length} road(s) connected`;
+    tip.classList.add('show');
+  } else tip.classList.remove('show');
+});
+
+cvs.addEventListener('mousedown',e=>{
+  const r=cvs.getBoundingClientRect();
+  const x=e.clientX-r.left, y=e.clientY-r.top;
+  const ni=getNodeAt(x,y);
+
+  if(mode==='del'){
+    if(ni>=0){
+      edges=edges.filter(e=>e.a!==ni&&e.b!==ni);
+      edges=edges.map(e=>({a:e.a-(e.a>ni?1:0),b:e.b-(e.b>ni?1:0)}));
+      nodes.splice(ni,1); roadStart=null; animPaths={greedy:[],dp:[],bf:[]};
+      clearResults(); draw(); return;
+    }
+    const ei=edges.findIndex(e=>{
+      const a=nodes[e.a],b=nodes[e.b];
+      const d=Math.abs((b.y-a.y)*x-(b.x-a.x)*y+b.x*a.y-b.y*a.x)/Math.hypot(b.x-a.x,b.y-a.y);
+      const inSeg=Math.min(a.x,b.x)-5<=x&&x<=Math.max(a.x,b.x)+5&&Math.min(a.y,b.y)-5<=y&&y<=Math.max(a.y,b.y)+5;
+      return d<8 && inSeg;
+    });
+    if(ei>=0){ edges.splice(ei,1); animPaths={greedy:[],dp:[],bf:[]}; clearResults(); draw(); } return;
+  }
+
+  if(mode==='road'){
+    if(ni>=0){
+      if(roadStart===null){ roadStart=ni; }
+      else if(roadStart!==ni){
+        if(getEdgeBetween(roadStart,ni)===-1) edges.push({a:roadStart,b:ni});
+        roadStart=null; animPaths={greedy:[],dp:[],bf:[]}; clearResults();
+      } else roadStart=null;
+      draw(); return;
+    }
+    return;
+  }
+
+  if(ni>=0){
+    dragging=ni; dragOff={x:nodes[ni].x-x,y:nodes[ni].y-y}; return;
+  }
+
+  // Add node
+  if(mode==='depot'){
+    // Remove existing depot
+    const old=nodes.findIndex(n=>n.type==='depot');
+    if(old>=0){ edges=edges.filter(e=>e.a!==old&&e.b!==old); edges=edges.map(e=>({a:e.a-(e.a>old?1:0),b:e.b-(e.b>old?1:0)})); nodes.splice(old,1); }
+    nodes.push({x,y,type:'depot',name:'Depot'});
+  } else if(mode==='stop'){
+    const stopN=nodes.filter(n=>n.type==='stop').length;
+    const names=['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa'];
+    nodes.push({x,y,type:'stop',name:names[stopN%names.length]});
+  }
+  animPaths={greedy:[],dp:[],bf:[]}; clearResults(); draw();
+});
+
+cvs.addEventListener('mouseup',()=>{ dragging=null; });
+cvs.addEventListener('mouseleave',()=>{ dragging=null; if(mode==='road') draw(); });
+
+// ── MODE ──────────────────────────────────────────────────
+function setMode(m){
+  mode=m; roadStart=null;
+  ['depot','stop','road','del'].forEach(id=>{
+    const b=document.getElementById('btn-'+id);
+    b.classList.remove('on','b','a');
+    if(id===m){
+      b.classList.add('on');
+      if(id==='stop') b.classList.add('on');
+      if(id==='road') b.classList.add('on','b');
+    }
+  });
+  const labels={depot:'⬟ ADD DEPOT',stop:'★ ADD DELIVERY STOP',road:'╌ DRAW ROAD (click two nodes)',del:'✕ DELETE NODE / ROAD'};
+  document.getElementById('mode-badge').textContent='MODE: '+labels[m];
+  draw();
+}
+
+// ── PRESETS ───────────────────────────────────────────────
+function loadPreset(type){
+  clearAll(true);
+  const cx=W/2, cy=H/2;
+  if(type==='city'){
+    const pts=[
+      {x:cx,y:cy+80,type:'depot',name:'Depot'},
+      {x:cx-180,y:cy-80,type:'stop',name:'Alpha'},
+      {x:cx-60,y:cy-120,type:'stop',name:'Beta'},
+      {x:cx+80,y:cy-100,type:'stop',name:'Gamma'},
+      {x:cx+170,y:cy-40,type:'stop',name:'Delta'},
+      {x:cx+140,y:cy+80,type:'stop',name:'Epsilon'},
+      {x:cx-100,y:cy+100,type:'stop',name:'Zeta'},
+    ];
+    nodes=pts;
+    edges=[
+      {a:0,b:1},{a:0,b:5},{a:0,b:6},
+      {a:1,b:2},{a:2,b:3},{a:3,b:4},{a:4,b:5},
+      {a:1,b:6},{a:2,b:4},{a:5,b:6},{a:3,b:6},{a:0,b:3}
+    ];
+  } else if(type==='suburb'){
+    nodes=[
+      {x:cx,y:cy+120,type:'depot',name:'Depot'},
+      {x:cx-200,y:cy+40,type:'stop',name:'Alpha'},
+      {x:cx-240,y:cy-80,type:'stop',name:'Beta'},
+      {x:cx-80,y:cy-160,type:'stop',name:'Gamma'},
+      {x:cx+100,y:cy-140,type:'stop',name:'Delta'},
+      {x:cx+220,y:cy-40,type:'stop',name:'Epsilon'},
+      {x:cx+180,y:cy+120,type:'stop',name:'Zeta'},
+      {x:cx+20,y:cy-40,type:'stop',name:'Eta'},
+    ];
+    edges=[
+      {a:0,b:1},{a:1,b:2},{a:2,b:3},{a:3,b:7},{a:7,b:4},{a:4,b:5},{a:5,b:6},{a:6,b:0},
+      {a:0,b:7},{a:1,b:7},{a:7,b:5},{a:3,b:4}
+    ];
+  } else {
+    // Random
+    nodes=[{x:cx,y:cy+H*0.28,type:'depot',name:'Depot'}];
+    const stopNames=['Alpha','Beta','Gamma','Delta','Epsilon','Zeta'];
+    const count=5+Math.floor(Math.random()*2);
+    for(let i=0;i<count;i++){
+      nodes.push({
+        x:80+Math.random()*(W-160),
+        y:60+Math.random()*(H-130),
+        type:'stop', name:stopNames[i]
+      });
+    }
+    // Connect random spanning tree + some extras
+    for(let i=1;i<nodes.length;i++){
+      let best=-1,bestD=Infinity;
+      for(let j=0;j<i;j++){if(dist(nodes[i],nodes[j])<bestD){bestD=dist(nodes[i],nodes[j]);best=j;}}
+      edges.push({a:i,b:best});
+    }
+    for(let k=0;k<3;k++){
+      const a=Math.floor(Math.random()*nodes.length);
+      const b=Math.floor(Math.random()*nodes.length);
+      if(a!==b&&getEdgeBetween(a,b)===-1) edges.push({a,b});
+    }
+  }
+  draw();
+  setStatus('Preset loaded. Click ▶ Plan Route to run all algorithms.',false);
+}
+
+// ── MAIN RUN ──────────────────────────────────────────────
+async function runAll(){
+  if(animRunning) return;
+  const depot=nodes.findIndex(n=>n.type==='depot');
+  const stops=nodes.map((_,i)=>i).filter(i=>nodes[i].type==='stop');
+  if(depot<0){setStatus('Place a depot first (⬟ Depot mode).',false);return;}
+  if(stops.length<2){setStatus('Add at least 2 delivery stops.',false);return;}
+
+  animRunning=true;
+  document.getElementById('run-btn').disabled=true;
+  animPaths={greedy:[],dp:[],bf:[]};
+
+  setStatus('Running Dijkstra for all pairs...',true);
+  await sleep(30);
+
+  // All delivery nodes: depot first
+  const allNodes=[depot,...stops];
+  const {mat,pathMat}=pairwiseDist(allNodes);
+  const n=allNodes.length;
+
+  // Check connectivity
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    if(i!==j&&mat[i][j]===Infinity){
+      setStatus('Graph not fully connected! Draw more roads.',false);
+      animRunning=false; document.getElementById('run-btn').disabled=false; return;
+    }
+  }
+
+  setStatus('Running Greedy TSP...',true); await sleep(20);
+  const greedy=greedyTSP(mat,n);
+  results.greedy=greedy;
+
+  setStatus('Running DP Held-Karp TSP...',true); await sleep(20);
+  const dp=dpTSP(mat,n);
+  results.dp=dp;
+
+  setStatus('Running Brute Force TSP...',true); await sleep(20);
+  const bf=bfTSP(mat,n);
+  results.bf=bf;
+
+  // Expand route orders to actual node paths
+  function expandOrder(order){
+    if(!order) return [];
+    const segs=[];
+    for(let i=0;i<order.length-1;i++){
+      const p=pathMat[order[i]][order[i+1]];
+      if(p) segs.push(p.map(idx=>allNodes[idx]));
+    }
+    return segs;
+  }
+
+  const greedySegs=expandOrder(greedy.order);
+  const dpSegs=dp?expandOrder(dp.order):[];
+  const bfSegs=bf&&bf.order?expandOrder(bf.order):[];
+
+  // Animate greedy first
+  setStatus(`Animating Greedy route (${greedy.dist.toFixed(1)} km)...`,true);
+  for(const seg of greedySegs){
+    for(let i=0;i<seg.length;i++){
+      animPaths.greedy=greedySegs.slice(0,greedySegs.indexOf(seg)+1).map(s=>s.slice(0,s.indexOf(seg[i])+1+Number(s!==seg)));
+      draw(); await sleep(speedMs());
+    }
+  }
+  animPaths.greedy=greedySegs;
+  if(dp){ animPaths.dp=dpSegs; }
+  if(bf&&bf.order){ animPaths.bf=bfSegs; }
+  draw();
+
+  // Update comparison
+  updateComparison(greedy,dp,bf,n);
+  buildRouteLog(greedy,allNodes,pathMat);
+  updateCompChart(greedy,dp,bf,n);
+
+  const bestD=Math.min(greedy.dist,dp?dp.dist:Infinity,bf&&bf.order?bf.dist:Infinity);
+  document.getElementById('sv-best').innerHTML=bestD.toFixed(1)+'<small> km</small>';
+
+  setStatus(`Done! Greedy: ${greedy.dist.toFixed(1)}km | DP-TSP: ${dp?dp.dist.toFixed(1):'N/A'}km | BF: ${bf&&bf.order?bf.dist.toFixed(1):'N/A'}km`,false);
+  animRunning=false; document.getElementById('run-btn').disabled=false;
+}
+
+function speedMs(){ return Math.round(200/parseInt(document.getElementById('spd').value)); }
+
+function updateComparison(greedy,dp,bf,n){
+  const dists=[greedy.dist,dp?dp.dist:null,bf&&bf.order?bf.dist:null].filter(d=>d!==null);
+  const maxD=Math.max(...dists)||1;
+  const minD=Math.min(...dists);
+
+  function setCard(id,res,extra){
+    if(!res||res.skipped){ document.getElementById('ad-'+id).textContent='N/A (n>'+{bf:8}[id]+')'; return; }
+    document.getElementById('ad-'+id).textContent=res.dist.toFixed(1)+' km';
+    document.getElementById('ab-'+id).style.width=Math.round(res.dist/maxD*100)+'%';
+    document.getElementById('at-'+id).textContent=res.time.toFixed(2)+'ms';
+    const card=document.getElementById('card-'+id);
+    card.classList.toggle('best',Math.abs(res.dist-minD)<0.001);
+    const bt=card.querySelector('.best-tag'); if(bt) bt.remove();
+    const st=card.querySelector('.savings-tag'); if(st) st.remove();
+    if(Math.abs(res.dist-minD)<0.001){
+      const t=document.createElement('span'); t.className='best-tag'; t.textContent='OPTIMAL';
+      card.querySelector('.algo-top').appendChild(t);
+    } else if(id==='greedy'&&dp){
+      const pct=((greedy.dist-dp.dist)/dp.dist*100).toFixed(1);
+      const t=document.createElement('span'); t.className='savings-tag'; t.textContent='+'+pct+'% vs optimal';
+      card.querySelector('.algo-top').appendChild(t);
+    }
+  }
+  setCard('greedy',greedy);
+  setCard('dp',dp);
+  setCard('bf',bf);
+  document.getElementById('bf-note').textContent=n>8?'Skipped (n>8)':'Exact';
+}
+
+function buildRouteLog(greedy,allNodes,pathMat){
+  const log=document.getElementById('route-log');
+  log.innerHTML='';
+  const order=greedy.order;
+  for(let i=0;i<order.length-1;i++){
+    const from=allNodes[order[i]], to=allNodes[order[i+1]];
+    const d=pathMat[order[i]][order[i+1]];
+    const dist=d&&d.length>1? (d.length-1)*0.05+0.1:0;
+    const line=document.createElement('div'); line.className='rline';
+    const isDepot=nodes[from].type==='depot'||nodes[to].type==='depot';
+    const clr=nodes[to].type==='depot'?DEPOT_CLR:STOP_CLR;
+    line.innerHTML=`
+      <span class="rnum">${i+1}.</span>
+      <span class="ricon" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">${nodes[to].type==='depot'?'D':String.fromCharCode(65+order[i+1]-1)}</span>
+      <span class="rdesc" style="font-size:12px">${nodes[from].name} → <b style="color:${clr}">${nodes[to].name}</b></span>
+      <span class="rdist">${d?((d.length-1)*0.05+0.1).toFixed(1)+'km':'?'}</span>
+    `;
+    log.appendChild(line);
+  }
+}
+
+function updateCompChart(greedy,dp,bf,n){
+  const labels=['Greedy','DP-TSP','Brute Force'];
+  const distData=[greedy.dist, dp?dp.dist:0, bf&&bf.order?bf.dist:0];
+  const timeData=[greedy.time, dp?dp.time:0, bf&&!bf.skipped?bf.time:0];
+  const colors=['rgba(52,211,153,0.75)','rgba(96,165,250,0.75)','rgba(167,139,250,0.75)'];
+  const borders=['#34d399','#60a5fa','#a78bfa'];
+
+  if(chartInst) chartInst.destroy();
+  chartInst=new Chart(document.getElementById('compChart').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Distance (km)',data:distData,backgroundColor:colors,borderColor:borders,borderWidth:1,borderRadius:3,yAxisID:'y'},
+        {label:'Time (ms)',data:timeData,backgroundColor:colors.map(c=>c.replace('.75','.35')),borderColor:borders,borderWidth:1,borderRadius:3,yAxisID:'y1'}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#5a6070',font:{family:'JetBrains Mono',size:9},boxWidth:8,padding:6}},
+        tooltip:{backgroundColor:'#111520',titleColor:'#dde1ee',bodyColor:'#5a6070',borderColor:'rgba(255,255,255,0.06)',borderWidth:1,titleFont:{family:'JetBrains Mono',size:9},bodyFont:{family:'JetBrains Mono',size:9}}
+      },
+      scales:{
+        x:{ticks:{color:'#5a6070',font:{family:'JetBrains Mono',size:8}},grid:{color:'rgba(255,255,255,0.03)'},border:{color:'rgba(255,255,255,0.06)'}},
+        y:{ticks:{color:'#5a6070',font:{family:'JetBrains Mono',size:8}},grid:{color:'rgba(255,255,255,0.03)'},border:{color:'rgba(255,255,255,0.06)'},title:{display:true,text:'km',color:'#5a6070',font:{size:8}}},
+        y1:{position:'right',ticks:{color:'#5a6070',font:{family:'JetBrains Mono',size:8}},grid:{drawOnChartArea:false},title:{display:true,text:'ms',color:'#5a6070',font:{size:8}}}
+      }
+    }
+  });
+}
+
+function toggleRoute(btn){
+  const a=btn.dataset.a;
+  routeViz[a]=!routeViz[a];
+  btn.classList.toggle('on',routeViz[a]);
+  draw();
+}
+
+function clearResults(){
+  results={greedy:null,dp:null,bf:null};
+  ['greedy','dp','bf'].forEach(id=>{
+    document.getElementById('ad-'+id).textContent='—';
+    document.getElementById('ab-'+id).style.width='0';
+    document.getElementById('at-'+id).textContent='—ms';
+    ['card-'+id].forEach(cid=>{
+      const c=document.getElementById(cid);
+      c.classList.remove('best');
+      const bt=c.querySelector('.best-tag'); if(bt) bt.remove();
+      const st=c.querySelector('.savings-tag'); if(st) st.remove();
+    });
+  });
+  document.getElementById('sv-best').textContent='—';
+  if(chartInst){chartInst.destroy();chartInst=null;}
+}
+
+function clearAll(silent){
+  nodes=[]; edges=[]; animPaths={greedy:[],dp:[],bf:[]};
+  roadStart=null; animRunning=false;
+  document.getElementById('run-btn').disabled=false;
+  clearResults();
+  document.getElementById('route-log').innerHTML='<div class="rline"><span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Add nodes, draw roads, then plan route.</span></div>';
+  if(!silent) setStatus('',false);
+  draw();
+}
+
+function updateStats(){
+  document.getElementById('sv-nodes').textContent=nodes.length;
+  document.getElementById('sv-edges').textContent=edges.length;
+  document.getElementById('sv-stops').textContent=nodes.filter(n=>n.type==='stop').length;
+}
+
+function setStatus(msg,running){
+  const bar=document.getElementById('statusbar');
+  if(!msg){bar.classList.remove('show');return;}
+  bar.classList.add('show');
+  document.getElementById('status-msg').textContent=msg;
+  bar.querySelector('.sdot').style.display=running?'block':'none';
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ── INIT ──────────────────────────────────────────────────
+resize();
+setTimeout(()=>{ loadPreset('city'); },100);
+</script>
+</body>
+</html>
